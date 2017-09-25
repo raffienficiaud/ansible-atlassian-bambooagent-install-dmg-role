@@ -1,0 +1,73 @@
+# This file installs DMGs and declares associated capabilities
+# For each defined DMG,
+# - it transfers the DMG to the host
+# - it opens/mounts the DMG, it may also remove any interactive mounting feature of the DMG during the mounting
+# - it runs a specific installation script, replacing on the fly the "${mount}" substring by the true mounting location
+# - it declares the associated capabilities, if any
+# - it cleans up
+
+
+# OSX specific stuff
+
+- block:
+  - include: check_vars.yml
+    tags:
+      - bambooagent:checks
+      - checks
+
+  - name: '[DMG] transfer the installers'
+    copy:
+      src: "{{ item.file }}"
+      dest: "/tmp/{{ item.file | basename }}"
+    with_items: "{{ dmg_to_install }}"
+
+  - name: '[DMG] remove interactive - checks'
+    file:
+      path="/tmp/{{ item.file | basename }}.nointeractive.cdr"
+      state=absent
+    with_items: "{{ dmg_to_install }}"
+    when: "{{ item.remove_interactive }}"
+
+  - name: '[DMG] remove interactive'
+    command: hdiutil convert "/tmp/{{ item.file | basename }}" -format UDTO -o "/tmp/{{ item.file  | basename }}.nointeractive.cdr"
+    with_items: "{{ dmg_to_install }}"
+    when: "{{ item.remove_interactive }}"
+
+  - name: '[DMG] mount the installers'
+    shell: hdiutil attach "/tmp/{{ item.file | basename }}{{ item.remove_interactive | ternary('.nointeractive.cdr', '') }}" -mountpoint "/tmp/tmpmount_{{ item.file | basename | hash('sha1') }}"
+    with_items: "{{ dmg_to_install }}"
+
+  - name: '[DMG] get the mount point informations'
+    shell: hdiutil info
+    register: hdiutil_mounts
+
+  - name: '[DMG] mount points'
+    debug:
+      msg="{{ hdiutil_mounts.stdout_lines }}"
+
+  - name: '[DMG] run the installers'
+    shell: "{{ item.install_cmd.replace('${mount}', '/tmp/tmpmount_' + (item.file | basename | hash('sha1'))) }}"
+    with_items: "{{ dmg_to_install }}"
+
+  when: ansible_distribution=="MacOSX"
+
+  rescue:
+    - debug:
+        msg="An error occured"
+    - command: /bin/false
+
+  always:
+    - name: '[DMG] detach all'
+      shell: hdiutil detach "/tmp/tmpmount_{{ item.file | basename | hash('sha1') }}"
+      with_items: "{{ dmg_to_install }}"
+
+    - file:
+        path="/tmp/{{ item.file | basename }}"
+        state=absent
+      with_items: "{{ dmg_to_install }}"
+
+    - file:
+        path="/tmp/{{ item.file | basename }}.nointeractive.cdr"
+        state=absent
+      with_items: "{{ dmg_to_install }}"
+      when: "{{ item.remove_interactive }}"
