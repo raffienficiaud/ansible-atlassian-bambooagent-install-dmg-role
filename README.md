@@ -38,6 +38,7 @@ During the installation, the `${mount}` variable is replaced with the actual mou
 
 Dependencies
 ------------
+
 No additional dependency.
 
 Example Playbook
@@ -45,7 +46,7 @@ Example Playbook
 
 The following example installs the XCode command line tools:
 
-```
+```yaml
 # Installs OSX command line tools (as defined in the inventory)
 # fixes the paths on the fly
 - role: ansible-atlassian-bambooagent-install-dmg-role
@@ -57,7 +58,7 @@ The following example installs the XCode command line tools:
 
 and the ``bamboo_xcode`` variable contains the following:
 
-```
+```yaml
 bamboo_xcode:
   file: 'commandlinetoolsosx10.10forxcode6.3.2.dmg'
   install_cmd: 'installer -allowUntrusted -dumplog -pkg "${mount}/Command Line Tools (OS X 10.10).pkg" -target /'
@@ -67,6 +68,7 @@ bamboo_xcode:
     minor: 3
     patch: 2
 ```
+
 The `${mount}` variable is expanded to the actual mount location (random folder).
 The `bamboo_xcode.version` is not related to the DMG role directly (but rather on the ansible *condition* of the above `dmg_to_install` command).
 
@@ -77,4 +79,5 @@ BSD
 
 Author Information
 ------------------
+
 Any comments on the Ansible, PR or bug reports are welcome from the corresponding Github project.
