@@ -15,14 +15,10 @@
       - bambooagent:checks
       - checks
 
-  #- fail:
-  #    msg: "dmg_to_install={{dmg_to_install.file}} - java_installation = {{java_installation}}"
-
   - name: '[DMG] transfer the installers'
     copy:
       src: "{{ dmg_to_install.file }}"
       dest: "/tmp/{{ dmg_to_install.file | basename }}"
-    #with_items: "{{ dmg_to_install }}"
 
   - name: '[DMG] remove interactive - checks'
     file:
