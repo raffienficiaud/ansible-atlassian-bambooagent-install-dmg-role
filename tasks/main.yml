@@ -22,18 +22,21 @@
 
   - name: '[DMG] remove interactive - checks'
     file:
-      path="/tmp/{{ dmg_to_install.file | basename }}.nointeractive.cdr"
-      state=absent
-    when: dmg_to_install.remove_interactive
-    
+      path: "/tmp/{{ dmg_to_install.file | basename }}.nointeractive.cdr"
+      state: absent
+    when:
+      - dmg_to_install.remove_interactive is defined
+      - dmg_to_install.remove_interactive | bool
+
   - name: '[DMG] remove interactive'
     command: hdiutil convert "/tmp/{{ dmg_to_install.file | basename }}" -format UDTO -o "/tmp/{{ dmg_to_install.file  | basename }}.nointeractive.cdr"
-    when: dmg_to_install.remove_interactive
-    
+    when:
+      - dmg_to_install.remove_interactive is defined
+      - dmg_to_install.remove_interactive | bool
 
   - name: '[DMG] mount the installers'
-    shell: hdiutil attach "/tmp/{{ dmg_to_install.file | basename }}{{ dmg_to_install.remove_interactive | ternary('.nointeractive.cdr', '') }}" -mountpoint "/tmp/tmpmount_{{ dmg_to_install.file | basename | hash('sha1') }}"
-    with_items: 
+    shell: hdiutil attach "/tmp/{{ dmg_to_install.file | basename }}{{ ('remove_interactive' in dmg_to_install and dmg_to_install.remove_interactive) | ternary('.nointeractive.cdr', '') }}" -mountpoint "/tmp/tmpmount_{{ dmg_to_install.file | basename | hash('sha1') }}"
+    loop:
       - dmg_to_install
 
   - name: '[DMG] get the mount point informations'
@@ -42,29 +45,34 @@
 
   - name: '[DMG] mount points'
     debug:
-      msg="{{ hdiutil_mounts.stdout_lines }}"
+      msg: "{{ hdiutil_mounts.stdout_lines }}"
 
+  # we silence the warning as this is a command provided by the user
   - name: '[DMG] run the installers'
     shell: "{{ dmg_to_install.install_cmd.replace('${mount}', '/tmp/tmpmount_' + (dmg_to_install.file | basename | hash('sha1'))) }}"
+    args:
+      warn: false
 
-  when: ansible_distribution=="MacOSX"
+  when: ansible_distribution == "MacOSX"
 
   rescue:
     - debug:
-        msg="An error occured"
+        msg: "An error occured"
     - command: /bin/false
 
   always:
     - name: '[DMG] detach all'
       shell: hdiutil detach "/tmp/tmpmount_{{ dmg_to_install.file | basename | hash('sha1') }}"
 
-    - file:
+    - name: '[DMG] Cleanup DMG file'
+      file:
         path="/tmp/{{ dmg_to_install.file | basename }}"
         state=absent
-      
-    - file:
-        path="/tmp/{{ dmg_to_install.file | basename }}.nointeractive.cdr"
-        state=absent
-      when: dmg_to_install.remove_interactive
 
-  
+    - name: '[DMG] Cleanup non-interactive DMG file'
+      file:
+        path: "/tmp/{{ dmg_to_install.file | basename }}.nointeractive.cdr"
+        state: absent
+      when:
+       - dmg_to_install.remove_interactive is defined
+       - dmg_to_install.remove_interactive | bool
