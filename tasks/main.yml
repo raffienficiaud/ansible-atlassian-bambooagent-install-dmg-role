@@ -18,24 +18,25 @@
   - name: '[DMG] transfer the installers'
     copy:
       src: "{{ dmg_to_install.file }}"
-      dest: "/tmp/{{ dmg_to_install.file | basename }}"
+      dest: "{{ local_folder }}/{{ dmg_to_install.file | basename }}"
+    when: not remote_src
 
   - name: '[DMG] remove interactive - checks'
     file:
-      path: "/tmp/{{ dmg_to_install.file | basename }}.nointeractive.cdr"
+      path: "{{ local_folder }}/{{ dmg_to_install.file | basename }}.nointeractive.cdr"
       state: absent
     when:
       - dmg_to_install.remove_interactive is defined
       - dmg_to_install.remove_interactive | bool
 
   - name: '[DMG] remove interactive'
-    command: hdiutil convert "/tmp/{{ dmg_to_install.file | basename }}" -format UDTO -o "/tmp/{{ dmg_to_install.file  | basename }}.nointeractive.cdr"
+    command: hdiutil convert "{{ local_folder }}/{{ dmg_to_install.file | basename }}" -format UDTO -o "{{ local_folder }}/{{ dmg_to_install.file  | basename }}.nointeractive.cdr"
     when:
       - dmg_to_install.remove_interactive is defined
       - dmg_to_install.remove_interactive | bool
 
   - name: '[DMG] mount the installers'
-    shell: hdiutil attach "/tmp/{{ dmg_to_install.file | basename }}{{ ('remove_interactive' in dmg_to_install and dmg_to_install.remove_interactive) | ternary('.nointeractive.cdr', '') }}" -mountpoint "/tmp/tmpmount_{{ dmg_to_install.file | basename | hash('sha1') }}"
+    shell: hdiutil attach "{{ local_folder }}/{{ dmg_to_install.file | basename }}{{ ('remove_interactive' in dmg_to_install and dmg_to_install.remove_interactive) | ternary('.nointeractive.cdr', '') }}" -mountpoint "{{ local_folder }}/tmpmount_{{ dmg_to_install.file | basename | hash('sha1') }}"
     loop:
       - dmg_to_install
 
@@ -49,7 +50,7 @@
 
   # we silence the warning as this is a command provided by the user
   - name: '[DMG] run the installers'
-    shell: "{{ dmg_to_install.install_cmd.replace('${mount}', '/tmp/tmpmount_' + (dmg_to_install.file | basename | hash('sha1'))) }}"
+    shell: "{{ dmg_to_install.install_cmd.replace('${mount}', local_folder + '/tmpmount_' + (dmg_to_install.file | basename | hash('sha1'))) }}"
     args:
       warn: false
 
@@ -62,16 +63,17 @@
 
   always:
     - name: '[DMG] detach all'
-      shell: hdiutil detach "/tmp/tmpmount_{{ dmg_to_install.file | basename | hash('sha1') }}"
+      shell: hdiutil detach "{{ local_folder }}/tmpmount_{{ dmg_to_install.file | basename | hash('sha1') }}"
 
     - name: '[DMG] Cleanup DMG file'
       file:
-        path="/tmp/{{ dmg_to_install.file | basename }}"
-        state=absent
+        path: "{{ local_folder }}/{{ dmg_to_install.file | basename }}"
+        state: absent
+      when: remove_after_install
 
     - name: '[DMG] Cleanup non-interactive DMG file'
       file:
-        path: "/tmp/{{ dmg_to_install.file | basename }}.nointeractive.cdr"
+        path: "{{ local_folder }}/{{ dmg_to_install.file | basename }}.nointeractive.cdr"
         state: absent
       when:
        - dmg_to_install.remove_interactive is defined
