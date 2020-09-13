@@ -6,9 +6,6 @@
 # - it declares the associated capabilities, if any
 # - it cleans up
 
-
-# OSX specific stuff
-
 - block:
   - include_tasks: check_vars.yml
     tags:
@@ -57,9 +54,9 @@
   when: ansible_distribution == "MacOSX"
 
   rescue:
-    - debug:
+    - name: Fails the play
+      fail:
         msg: "An error occured"
-    - command: /bin/false
 
   always:
     - name: '[DMG] detach all'

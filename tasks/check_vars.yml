@@ -3,7 +3,8 @@
 #
 
 - name: Checking that required variables are set
-  fail: msg="{{ item }} is not defined '{{ {{ item }} }}'"
+  fail:
+    msg: "{{ item }} is not defined"
   when: item is undefined
   with_items:
     - dmg_to_install
