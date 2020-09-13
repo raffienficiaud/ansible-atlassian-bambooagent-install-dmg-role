@@ -1,2 +1,6 @@
 ---
 # defaults file for ansible-atlassian-bambooagent-install-dmg-role
+
+remote_src: false
+local_folder: /tmp
+remove_after_install: true

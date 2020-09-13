@@ -13,26 +13,26 @@ This is currently a role, but it should rather be a complex command. This role
 
 Requirements
 ------------
-No particular requirement apart from running on an OSX machine.
+No particular requirement apart from running on an OSX target machine.
 
 Role Variables
 --------------
 
 | variable | default | meaning |
 |----------|---------|---------|
-|dmg_to_install| **required**| the DMG file to install. This is actually a dictionary indicating
-the installation options.|
+|dmg_to_install| **required**| the DMG file to install. This is actually a dictionary indicating the installation options.|
 
 ### ``dmg_to_install`` format
 The ``dmg_to_install`` is a dictionary containing the following fields
 
 | field | default | meaning |
 |----------|---------|---------|
-|``file``| **required**| Points to the DMG file.|
-|``install_cmd``| **required**| The command that should be run on the remote after the
-DMG has been properly mounted.|
-|``remove_interactive``| ``False``| Indicates if the original DMG should be modified in
-order to remove some interactive required inputs.|
+|`file`| **required**| Points to the DMG file.|
+|`install_cmd`| **required**| The command that should be run on the remote after the DMG has been properly mounted.|
+|`remove_interactive`| `False`| Indicates if the original DMG should be modified in order to remove some interactive required inputs.|
+|`local_folder`| `/tmp`| The folder on the remote where the DMG is copied. Intermediate DMGs are also created there.|
+|`remote_src`| `False` | if `True`, the DMG is already on the remote and is not copied from the controller.|
+|`remove_after_install` | `True` | if `False`, the original DMG is not deleted after install. The intermediate DMGs are always deleted.|
 
 During the installation, the `${mount}` variable is replaced with the actual mount location of the DMG content (see example below).
 
@@ -47,13 +47,14 @@ Example Playbook
 The following example installs the XCode command line tools:
 
 ```yaml
-# Installs OSX command line tools (as defined in the inventory)
+# Installs OSX command line tools
 # fixes the paths on the fly
 - role: ansible-atlassian-bambooagent-install-dmg-role
   dmg_to_install:
     - "{{ bamboo_xcode }}"
-  when: ({{ (ansible_distribution=="MacOSX") and
-            (xcode_version_installed | version_compare('%d.%d' % (bamboo_xcode.version.major, bamboo_xcode.version.minor), '<') ) }})
+  when:
+    - ansible_distribution == "MacOSX"
+    - xcode_version_installed | version_compare('%d.%d' % (bamboo_xcode.version.major, bamboo_xcode.version.minor), '<')
 ```
 
 and the ``bamboo_xcode`` variable contains the following:
